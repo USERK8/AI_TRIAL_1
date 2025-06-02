@@ -1,5 +1,6 @@
 const input = document.getElementById("user-input");
 const chatBox = document.getElementById("chat-box");
+const OPENAI_API_KEY = "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"; // 👈 Replace with yours
 
 function speak(text) {
   const msg = new SpeechSynthesisUtterance();
@@ -19,38 +20,40 @@ function addMessage(message, from = "user") {
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-function handleInput() {
+async function handleInput() {
   const userText = input.value.trim();
   if (!userText) return;
   addMessage(userText, "user");
   input.value = "";
 
-  let response = "I didn't understand that.";
+  const loading = document.createElement("div");
+  loading.textContent = "Jarvis is thinking...";
+  chatBox.appendChild(loading);
 
-  // Basic commands
-  const command = userText.toLowerCase();
-  if (command.includes("hi")) {
-    response = "Hello, Sohan!";
-  } else if (command.includes("time")) {
-    const time = new Date().toLocaleTimeString();
-    response = `The time is ${time}`;
-  } else if (command.includes("date")) {
-    const date = new Date().toLocaleDateString();
-    response = `Today's date is ${date}`;
-  } else if (command.includes("joke")) {
-    const jokes = [
-      "Why don’t scientists trust atoms? Because they make up everything!",
-      "I told my computer I needed a break, and now it won’t stop sending me ads for Kit-Kats.",
-      "Why was the math book sad? It had too many problems."
-    ];
-    response = jokes[Math.floor(Math.random() * jokes.length)];
-  } else if (command.includes("open google")) {
-    response = "Opening Google...";
-    window.open("https://www.google.com", "_blank");
-  } else if (command.includes("bye")) {
-    response = "Goodbye, see you later!";
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "gpt-3.5-turbo",
+        messages: [{ role: "user", content: userText }]
+      })
+    });
+
+    const data = await response.json();
+    const reply = data.choices[0].message.content.trim();
+
+    chatBox.removeChild(loading);
+    addMessage(reply, "jarvis");
+    speak(reply);
+  } catch (error) {
+    chatBox.removeChild(loading);
+    const errMsg = "Sorry, I ran into a problem.";
+    addMessage(errMsg, "jarvis");
+    speak(errMsg);
+    console.error(error);
   }
-
-  addMessage(response, "jarvis");
-  speak(response);
 }
